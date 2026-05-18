@@ -1,0 +1,135 @@
+name: Chip
+kind: module
+children:
+  - name: GM
+    kind: storage
+    capacity_bytes: 8589934592
+    banks: 16
+    read_ports: 2
+    write_ports: 2
+
+  - name: AICore
+    kind: module
+    children:
+      - name: L1Buffer
+        kind: storage
+        capacity_bytes: 1048576
+        banks: 4
+        read_ports: 2
+        write_ports: 2
+      - name: L0A
+        kind: storage
+        capacity_bytes: 65536
+      - name: L0B
+        kind: storage
+        capacity_bytes: 65536
+      - name: L0C
+        kind: storage
+        capacity_bytes: 262144
+      - name: UB
+        kind: storage
+        capacity_bytes: 262144
+        banks: 4
+        read_ports: 2
+        write_ports: 2
+
+      - name: Cube
+        kind: compute
+        operation: matmul
+        operand_shape: [16, 16, 16]
+        throughput_ops_per_cycle: 4096
+      - name: Vector
+        kind: compute
+        operation: vector
+        throughput_ops_per_cycle: 128
+      - name: Scalar
+        kind: compute
+        operation: scalar
+        throughput_ops_per_cycle: 1
+
+      - name: ScalarCtrl
+        kind: control
+        instruction_queue_depth: 16
+
+      - name: MTE1
+        kind: dma
+        allowed_src_kinds: [storage]
+        allowed_dst_kinds: [storage]
+        allowed_src_names: [L1Buffer]
+        allowed_dst_names: [L0A, L0B, UB]
+        bandwidth: 256
+      - name: MTE2
+        kind: dma
+        allowed_src_kinds: [storage]
+        allowed_dst_kinds: [storage]
+        allowed_src_names: [GM]
+        allowed_dst_names: [L1Buffer, L0A, L0B, UB]
+        bandwidth: 64
+      - name: MTE3
+        kind: dma
+        allowed_src_kinds: [storage]
+        allowed_dst_kinds: [storage]
+        allowed_src_names: [UB]
+        allowed_dst_names: [GM, L1Buffer]
+        bandwidth: 64
+
+    paths:
+      - name: l1_to_l0a
+        src: L1Buffer
+        dst: L0A
+        engine: MTE1
+      - name: l1_to_l0b
+        src: L1Buffer
+        dst: L0B
+        engine: MTE1
+      - name: l1_to_ub
+        src: L1Buffer
+        dst: UB
+        engine: MTE1
+      - name: ub_to_l1
+        src: UB
+        dst: L1Buffer
+        engine: MTE3
+      - name: l0a_to_cube
+        src: L0A
+        dst: Cube
+      - name: l0b_to_cube
+        src: L0B
+        dst: Cube
+      - name: cube_to_l0c
+        src: Cube
+        dst: L0C
+      - name: l0c_to_ub
+        src: L0C
+        dst: UB
+        direction: bi
+      - name: ub_vector
+        src: UB
+        dst: Vector
+        direction: bi
+      - name: ub_scalar
+        src: UB
+        dst: Scalar
+        direction: bi
+
+paths:
+  - name: gm_to_l1
+    src: GM
+    dst: AICore.L1Buffer
+    engine: AICore.MTE2
+  - name: gm_to_l0a
+    src: GM
+    dst: AICore.L0A
+    engine: AICore.MTE2
+  - name: gm_to_l0b
+    src: GM
+    dst: AICore.L0B
+    engine: AICore.MTE2
+  - name: gm_to_ub
+    src: GM
+    dst: AICore.UB
+    engine: AICore.MTE2
+  - name: ub_to_gm
+    src: AICore.UB
+    dst: GM
+    engine: AICore.MTE3

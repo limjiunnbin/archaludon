@@ -4,37 +4,38 @@ digraph arch {
   compound=true;
   node [style=filled, fontname="Helvetica"];
   edge [fontname="Helvetica", fontsize=10];
-  subgraph cluster_n131626635953552 {
+  subgraph cluster_n126334042139584 {
     label="Chip";
     style=dashed;
-    n131626635954896 [label="GM\n8589934592B", shape=box, fillcolor=lightblue];
-    subgraph cluster_n131626640023440 {
+    n126334042140496 [label="GM\n8589934592B", shape=box, fillcolor=lightblue];
+    subgraph cluster_n126334042129456 {
       label="AICore";
       style=dashed;
-      n131626640024400 [label="L1Buffer\n1048576B", shape=box, fillcolor=lightblue];
-      n131626640025360 [label="L0A\n65536B", shape=box, fillcolor=lightblue];
-      n131626638532400 [label="L0B\n65536B", shape=box, fillcolor=lightblue];
-      n131626638528144 [label="L0C\n262144B", shape=box, fillcolor=lightblue];
-      n131626638970608 [label="UB\n262144B", shape=box, fillcolor=lightblue];
-      n131626635954224 [label="Cube\n[matmul]", shape=ellipse, fillcolor=steelblue];
-      n131626640027280 [label="Vector\n[vector]", shape=ellipse, fillcolor=steelblue];
-      n131626640026960 [label="Scalar\n[scalar]", shape=ellipse, fillcolor=steelblue];
-      n131626635953216 [label="ScalarCtrl\n(ctrl)", shape=octagon, fillcolor=lightgray];
+      n126334042132672 [label="L1Buffer\n1048576B", shape=box, fillcolor=lightblue];
+      n126334042141792 [label="L0A\n65536B", shape=box, fillcolor=lightblue];
+      n126334042141888 [label="L0B\n65536B", shape=box, fillcolor=lightblue];
+      n126334042142032 [label="L0C\n262144B", shape=box, fillcolor=lightblue];
+      n126334042140208 [label="UB\n262144B", shape=box, fillcolor=lightblue];
+      n126334042140064 [label="Cube\n[matmul]", shape=ellipse, fillcolor=steelblue];
+      n126334042142752 [label="Vector\n[vector]", shape=ellipse, fillcolor=steelblue];
+      n126334042133920 [label="Scalar\n[scalar]", shape=ellipse, fillcolor=steelblue];
+      n126334042134016 [label="ScalarCtrl\n(ctrl)", shape=octagon, fillcolor=lightgray];
     }
   }
-  n131626635954896 -> n131626640024400 [label="MTE2"];
-  n131626635954896 -> n131626640025360 [label="MTE2"];
-  n131626635954896 -> n131626638532400 [label="MTE2"];
-  n131626635954896 -> n131626638970608 [label="MTE2"];
-  n131626638970608 -> n131626635954896 [label="MTE3"];
-  n131626640024400 -> n131626640025360 [label="MTE1"];
-  n131626640024400 -> n131626638532400 [label="MTE1"];
-  n131626640024400 -> n131626638970608 [label="MTE1"];
-  n131626638970608 -> n131626640024400 [label="MTE3"];
-  n131626640025360 -> n131626635954224;
-  n131626638532400 -> n131626635954224;
-  n131626635954224 -> n131626638528144;
-  n131626638528144 -> n131626638970608 [dir=both];
-  n131626638970608 -> n131626640027280 [dir=both];
-  n131626638970608 -> n131626640026960 [dir=both];
+  n126334042140496 -> n126334042132672 [label="MTE2"];
+  n126334042140496 -> n126334042141792 [label="MTE2"];
+  n126334042140496 -> n126334042141888 [label="MTE2"];
+  n126334042140496 -> n126334042140208 [label="MTE2"];
+  n126334042140208 -> n126334042140496 [label="MTE3"];
+  n126334042142032 -> n126334042140496 [label="FixPipe"];
+  n126334042132672 -> n126334042141792 [label="MTE1"];
+  n126334042132672 -> n126334042141888 [label="MTE1"];
+  n126334042132672 -> n126334042140208 [label="MTE1"];
+  n126334042140208 -> n126334042132672 [label="MTE3"];
+  n126334042141792 -> n126334042140064;
+  n126334042141888 -> n126334042140064;
+  n126334042140064 -> n126334042142032;
+  n126334042142032 -> n126334042140208 [label="FixPipe"];
+  n126334042140208 -> n126334042142752 [dir=both];
+  n126334042140208 -> n126334042133920 [dir=both];
 }

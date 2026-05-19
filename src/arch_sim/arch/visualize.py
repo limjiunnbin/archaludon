@@ -9,7 +9,7 @@ from typing import Iterator
 from .base import BaseUnit, Module, UnitKind
 from .compute import ComputeUnit
 from .control import ControlUnit
-from .dma import DMAEngine, Direction
+from .pipe import Direction, Pipe
 from .storage import StorageUnit
 
 
@@ -17,7 +17,7 @@ _COLOR = {
     UnitKind.STORAGE: "lightblue",
     UnitKind.COMPUTE: "steelblue",
     UnitKind.CONTROL: "lightgray",
-    UnitKind.DMA: "khaki",
+    UnitKind.PIPE: "khaki",
     UnitKind.MODULE: "white",
     UnitKind.EXTERNAL: "white",
 }
@@ -26,7 +26,7 @@ _SHAPE = {
     UnitKind.STORAGE: "box",
     UnitKind.COMPUTE: "ellipse",
     UnitKind.CONTROL: "octagon",
-    UnitKind.DMA: "cds",
+    UnitKind.PIPE: "cds",
     UnitKind.MODULE: "box",
     UnitKind.EXTERNAL: "box",
 }
@@ -83,8 +83,8 @@ def _emit_module(mod: Module, lines: list[str], depth: int) -> None:
     for c in mod.children:
         if isinstance(c, Module):
             _emit_module(c, lines, depth + 1)
-        elif isinstance(c, DMAEngine):
-            # DMA engines appear as edge labels, not as nodes.
+        elif isinstance(c, Pipe):
+            # Pipes appear as edge labels, not as nodes.
             continue
         else:
             lines.append(

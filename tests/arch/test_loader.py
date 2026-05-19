@@ -4,8 +4,8 @@ import pytest
 
 from arch_sim.arch import (
     ComputeUnit,
-    DMAEngine,
     Module,
+    Pipe,
     StorageUnit,
     dump,
     load,
@@ -32,7 +32,7 @@ def test_load_fixture_structure():
     mte2 = chip.find("AICore.MTE2")
     assert isinstance(l1, StorageUnit)
     assert isinstance(cube, ComputeUnit) and cube.operand_shape == (16, 16, 16)
-    assert isinstance(mte2, DMAEngine)
+    assert isinstance(mte2, Pipe)
 
 
 def test_roundtrip_dump_load_is_structurally_equal():
@@ -69,13 +69,14 @@ def _unit_extras(unit):
         return ("storage", unit.capacity_bytes, unit.banks, unit.read_ports, unit.write_ports)
     if isinstance(unit, ComputeUnit):
         return ("compute", unit.operation, unit.throughput_ops_per_cycle, unit.operand_shape)
-    if isinstance(unit, DMAEngine):
+    if isinstance(unit, Pipe):
         return (
-            "dma",
+            "pipe",
             tuple(k.value for k in unit.allowed_src_kinds),
             tuple(k.value for k in unit.allowed_dst_kinds),
             tuple(unit.allowed_src_names) if unit.allowed_src_names else None,
             tuple(unit.allowed_dst_names) if unit.allowed_dst_names else None,
             unit.bandwidth,
+            unit.queue_depth,
         )
     return (unit.kind.value,)

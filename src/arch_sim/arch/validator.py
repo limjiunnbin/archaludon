@@ -28,7 +28,7 @@ def validate(root: Module) -> ValidationReport:
     report = ValidationReport()
     units = set(_walk(root))
     _check_name_collisions(root, report)
-    _check_dma_paths(root, units, report)
+    _check_pipe_paths(root, units, report)
     _check_orphans(root, report)
     _check_port_oversubscription(root, report)
     return report
@@ -61,7 +61,7 @@ def _check_name_collisions(root: Module, report: ValidationReport) -> None:
             seen.add(c.name)
 
 
-def _check_dma_paths(root: Module, units: set[BaseUnit], report: ValidationReport) -> None:
+def _check_pipe_paths(root: Module, units: set[BaseUnit], report: ValidationReport) -> None:
     for mod in _modules(root):
         for path in mod.paths:
             label = path.name or f"{path.src.name}->{path.dst.name}"

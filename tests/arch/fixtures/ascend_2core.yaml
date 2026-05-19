@@ -11,6 +11,7 @@ children:
     write_ports: 2
 
   - name: AICore
+    count: 2
     kind: module
     children:
       - name: L1Buffer

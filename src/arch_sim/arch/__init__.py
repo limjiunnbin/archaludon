@@ -2,7 +2,7 @@
 from .base import BaseUnit, Module, UnitKind
 from .compute import ComputeUnit
 from .control import ControlUnit
-from .dma import DataPath, Direction, DMAEngine
+from .pipe import DataPath, Direction, Pipe
 from .loader import dump, load, loads
 from .storage import StorageUnit
 from .validator import ValidationReport, validate
@@ -15,7 +15,7 @@ __all__ = [
     "StorageUnit",
     "ComputeUnit",
     "ControlUnit",
-    "DMAEngine",
+    "Pipe",
     "DataPath",
     "Direction",
     "ValidationReport",

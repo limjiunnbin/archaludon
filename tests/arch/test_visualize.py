@@ -15,7 +15,7 @@ def test_dot_contains_unit_names_and_engine_labels():
     out = to_dot(load(FIXTURE))
     for name in ("L1Buffer", "Cube", "Vector", "UB", "GM"):
         assert name in out
-    # DMA engines surface as edge labels.
+    # Pipes surface as edge labels.
     for engine in ("MTE1", "MTE2", "MTE3"):
         assert f'label="{engine}"' in out
 

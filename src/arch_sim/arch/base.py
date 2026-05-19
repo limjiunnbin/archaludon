@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Optional
 if TYPE_CHECKING:
     from .compute import ComputeUnit
     from .control import ControlUnit
-    from .dma import DataPath, DMAEngine, Direction
+    from .pipe import DataPath, Direction, Pipe
     from .storage import StorageUnit
 
 
@@ -16,7 +16,7 @@ class UnitKind(Enum):
     STORAGE = "storage"
     COMPUTE = "compute"
     CONTROL = "control"
-    DMA = "dma"
+    PIPE = "pipe"
     EXTERNAL = "external"
     MODULE = "module"
 
@@ -84,23 +84,23 @@ class Module(BaseUnit):
 
         return self.add_child(ControlUnit(name=name, **kwargs))  # type: ignore[return-value]
 
-    def add_dma(self, name: str, **kwargs: Any) -> "DMAEngine":
-        from .dma import DMAEngine
+    def add_pipe(self, name: str, **kwargs: Any) -> "Pipe":
+        from .pipe import Pipe
 
-        return self.add_child(DMAEngine(name=name, **kwargs))  # type: ignore[return-value]
+        return self.add_child(Pipe(name=name, **kwargs))  # type: ignore[return-value]
 
     def connect(
         self,
         src: BaseUnit,
         dst: BaseUnit,
         *,
-        engine: Optional["DMAEngine"] = None,
+        engine: Optional["Pipe"] = None,
         direction: Optional["Direction"] = None,
         bandwidth: float = 0.0,
         name: Optional[str] = None,
     ) -> "DataPath":
-        """Build a DataPath between two units. Raises on DMA kind/name violation."""
-        from .dma import DataPath, Direction
+        """Build a DataPath between two units. Raises on pipe kind/name violation."""
+        from .pipe import DataPath, Direction
 
         if direction is None:
             direction = Direction.UNI
@@ -115,7 +115,7 @@ class Module(BaseUnit):
         if engine is not None:
             ok, reason = engine.validate(path)
             if not ok:
-                raise ValueError(f"DMA validation failed: {reason}")
+                raise ValueError(f"pipe validation failed: {reason}")
         self.paths.append(path)
         return path
 

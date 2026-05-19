@@ -1,4 +1,4 @@
-"""DMA engines and the DataPaths they carry."""
+"""Pipes: queued movers (DMA-style engines and FixPipe) that carry DataPaths."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,13 +17,13 @@ class Direction(Enum):
 
 @dataclass(eq=False)
 class DataPath:
-    """A connection between two units, optionally carried by a DMA engine."""
+    """A connection between two units, optionally carried by a Pipe."""
 
     src: BaseUnit
     dst: BaseUnit
     direction: Direction = Direction.UNI
     bandwidth: float = 0.0
-    engine: Optional["DMAEngine"] = None
+    engine: Optional["Pipe"] = None
     name: Optional[str] = None
 
     def endpoints(self) -> tuple[BaseUnit, BaseUnit]:
@@ -31,19 +31,20 @@ class DataPath:
 
 
 @dataclass(eq=False)
-class DMAEngine(BaseUnit):
-    """A DMA mover that constrains which (src, dst) units a DataPath can join."""
+class Pipe(BaseUnit):
+    """A queued mover (MTE1/2/3, FixPipe, …) that constrains which (src, dst) units a DataPath can join."""
 
-    KIND: ClassVar[UnitKind] = UnitKind.DMA
+    KIND: ClassVar[UnitKind] = UnitKind.PIPE
 
     allowed_src_kinds: list[UnitKind] = field(default_factory=list)
     allowed_dst_kinds: list[UnitKind] = field(default_factory=list)
     allowed_src_names: Optional[list[str]] = None
     allowed_dst_names: Optional[list[str]] = None
     bandwidth: float = 0.0
+    queue_depth: int = 1
 
     def validate(self, path: DataPath) -> tuple[bool, str]:
-        """Check whether this engine can legally carry the given DataPath."""
+        """Check whether this pipe can legally carry the given DataPath."""
         if self.allowed_src_kinds and path.src.kind not in self.allowed_src_kinds:
             return False, f"src kind {path.src.kind.value!r} not allowed by {self.name}"
         if self.allowed_dst_kinds and path.dst.kind not in self.allowed_dst_kinds:

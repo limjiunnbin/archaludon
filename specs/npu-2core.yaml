@@ -1,5 +1,3 @@
-# An NPU-like AI core: GM -> (MTE2) -> L1 -> (MTE1) -> L0A/L0B -> Cube -> L0C
-# plus a Unified Buffer feeding Vector/Scalar units, with MTE3 writing UB -> GM.
 name: Chip
 kind: module
 children:
@@ -11,6 +9,7 @@ children:
     write_ports: 2
 
   - name: AICore
+    count: 2
     kind: module
     children:
       - name: L1Buffer
@@ -58,22 +57,29 @@ children:
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [L1Buffer]
-        allowed_dst_names: [L0A, L0B]
+        allowed_dst_names: [L0A, L0B, UB]
         bandwidth: 256
       - name: MTE2
         kind: pipe
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [GM]
-        allowed_dst_names: [L1Buffer, UB]
+        allowed_dst_names: [L1Buffer, L0A, L0B, UB]
         bandwidth: 64
       - name: MTE3
         kind: pipe
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [UB]
-        allowed_dst_names: [GM]
+        allowed_dst_names: [GM, L1Buffer]
         bandwidth: 64
+      - name: FixPipe
+        kind: pipe
+        allowed_src_kinds: [storage]
+        allowed_dst_kinds: [storage]
+        allowed_src_names: [L0C]
+        allowed_dst_names: [UB, GM]
+        bandwidth: 128
 
     paths:
       - name: l1_to_l0a
@@ -84,6 +90,14 @@ children:
         src: L1Buffer
         dst: L0B
         engine: MTE1
+      - name: l1_to_ub
+        src: L1Buffer
+        dst: UB
+        engine: MTE1
+      - name: ub_to_l1
+        src: UB
+        dst: L1Buffer
+        engine: MTE3
       - name: l0a_to_cube
         src: L0A
         dst: Cube
@@ -96,20 +110,28 @@ children:
       - name: l0c_to_ub
         src: L0C
         dst: UB
-      - name: ub_to_vector
+        engine: FixPipe
+      - name: ub_vector
         src: UB
         dst: Vector
-      - name: vector_to_ub
-        src: Vector
-        dst: UB
-      - name: ub_to_scalar
+        direction: bi
+      - name: ub_scalar
         src: UB
         dst: Scalar
+        direction: bi
 
 paths:
   - name: gm_to_l1
     src: GM
     dst: AICore.L1Buffer
+    engine: AICore.MTE2
+  - name: gm_to_l0a
+    src: GM
+    dst: AICore.L0A
+    engine: AICore.MTE2
+  - name: gm_to_l0b
+    src: GM
+    dst: AICore.L0B
     engine: AICore.MTE2
   - name: gm_to_ub
     src: GM
@@ -119,3 +141,7 @@ paths:
     src: AICore.UB
     dst: GM
     engine: AICore.MTE3
+  - name: l0c_to_gm
+    src: AICore.L0C
+    dst: GM
+    engine: AICore.FixPipe

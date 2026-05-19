@@ -2,9 +2,9 @@ from pathlib import Path
 
 from arch_sim.arch import (
     DataPath,
-    DMAEngine,
     Direction,
     Module,
+    Pipe,
     StorageUnit,
     UnitKind,
     load,
@@ -45,7 +45,7 @@ def test_engine_kind_mismatch_caught_by_validator():
     chip = Module("Chip")
     a = chip.add_storage("A")
     b = chip.add_storage("B")
-    eng = chip.add_dma(
+    eng = chip.add_pipe(
         "M",
         allowed_src_kinds=[UnitKind.STORAGE],
         allowed_dst_kinds=[UnitKind.COMPUTE],

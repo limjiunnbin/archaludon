@@ -52,26 +52,33 @@ children:
         instruction_queue_depth: 16
 
       - name: MTE1
-        kind: dma
+        kind: pipe
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [L1Buffer]
         allowed_dst_names: [L0A, L0B, UB]
         bandwidth: 256
       - name: MTE2
-        kind: dma
+        kind: pipe
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [GM]
         allowed_dst_names: [L1Buffer, L0A, L0B, UB]
         bandwidth: 64
       - name: MTE3
-        kind: dma
+        kind: pipe
         allowed_src_kinds: [storage]
         allowed_dst_kinds: [storage]
         allowed_src_names: [UB]
         allowed_dst_names: [GM, L1Buffer]
         bandwidth: 64
+      - name: FixPipe
+        kind: pipe
+        allowed_src_kinds: [storage]
+        allowed_dst_kinds: [storage]
+        allowed_src_names: [L0C]
+        allowed_dst_names: [UB, GM]
+        bandwidth: 128
 
     paths:
       - name: l1_to_l0a
@@ -102,7 +109,7 @@ children:
       - name: l0c_to_ub
         src: L0C
         dst: UB
-        direction: bi
+        engine: FixPipe
       - name: ub_vector
         src: UB
         dst: Vector
@@ -133,3 +140,7 @@ paths:
     src: AICore.UB
     dst: GM
     engine: AICore.MTE3
+  - name: l0c_to_gm
+    src: AICore.L0C
+    dst: GM
+    engine: AICore.FixPipe

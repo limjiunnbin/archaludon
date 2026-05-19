@@ -10,7 +10,7 @@ from .base import BaseUnit, Module
 from .builder import build
 from .compute import ComputeUnit
 from .control import ControlUnit
-from .dma import DMAEngine
+from .pipe import Pipe
 from .storage import StorageUnit
 
 
@@ -84,7 +84,7 @@ def _unit_to_dict(u: BaseUnit, root: Module) -> dict[str, Any]:
             d["operand_shape"] = list(u.operand_shape)
     elif isinstance(u, ControlUnit):
         d["instruction_queue_depth"] = u.instruction_queue_depth
-    elif isinstance(u, DMAEngine):
+    elif isinstance(u, Pipe):
         d["allowed_src_kinds"] = [k.value for k in u.allowed_src_kinds]
         d["allowed_dst_kinds"] = [k.value for k in u.allowed_dst_kinds]
         if u.allowed_src_names is not None:
@@ -93,4 +93,6 @@ def _unit_to_dict(u: BaseUnit, root: Module) -> dict[str, Any]:
             d["allowed_dst_names"] = list(u.allowed_dst_names)
         if u.bandwidth:
             d["bandwidth"] = u.bandwidth
+        if u.queue_depth != 1:
+            d["queue_depth"] = u.queue_depth
     return d

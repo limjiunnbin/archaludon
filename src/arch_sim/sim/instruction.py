@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 import torch
 
-from arch_sim.arch import ComputeUnit, Pipe
+from arch_sim.arch import BaseUnit, ComputeUnit, Pipe
 from arch_sim.cost import Move, Op
 
 
@@ -15,8 +15,11 @@ class Instruction:
     tensor: torch.Tensor
     deps: list["Instruction"] = field(default_factory=list)
     label: str = ""
+    # Destination buffer the output lands in. None = unbounded sink (no backpressure).
+    dst: Optional[BaseUnit] = None
     start_time: Optional[float] = None
-    end_time: Optional[float] = None
+    end_time: Optional[float] = None  # execution end (start + cost)
+    retire_time: Optional[float] = None  # set by the backpressure engine only
 
     def cost(self) -> float:
         if isinstance(self.unit, Pipe):

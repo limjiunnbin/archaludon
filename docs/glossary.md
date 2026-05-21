@@ -50,3 +50,18 @@ NPU / Ascend naming; the storage capacities and bandwidths quoted are from
 - **bandwidth** — a pipe's transfer rate in **bytes per cycle**.
 - **throughput** — a compute unit's rate in **elements per cycle**
   (`throughput_ops_per_cycle`).
+
+## Backpressure (the `sim/backpressure.py` engine)
+
+- **backpressure** — a slow consumer forcing its producer to stall once the buffer
+  between them fills. Propagates one hop upstream at a time.
+- **queue_depth** — a unit's bounded buffer/queue capacity in slots. Used by the
+  backpressure engine; ignored by the default `Sim`.
+- **destination / `dst`** — the buffer an instruction's output lands in. `None` =
+  an unbounded sink (no backpressure on that output).
+- **retire** — when an instruction leaves its unit: execution done **and** its
+  destination has a free slot. `retire_time` records it; total cycles =
+  `max(retire_time)`.
+- **blocking-after-service (BAS)** — the discipline the engine uses: a unit finishes
+  executing but stays blocked (can't start the next instruction) until the current
+  one can retire.

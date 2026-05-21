@@ -17,3 +17,4 @@ class ComputeUnit(BaseUnit):
     throughput_ops_per_cycle: float = 1.0
     # Fixed operand shape for SIMD-like units (e.g. (16,16,16) for a Cube). None = flexible.
     operand_shape: Optional[tuple[int, ...]] = None
+    queue_depth: int = 1

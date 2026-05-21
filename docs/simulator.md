@@ -16,15 +16,19 @@ class Instruction:
     tensor: torch.Tensor
     deps: list[Instruction] = []
     label: str = ""
-    start_time: float | None = None   # filled in by the sim
-    end_time: float | None = None     # filled in by the sim
+    dst: BaseUnit | None = None       # destination buffer (backpressure engine only)
+    start_time: float | None = None   # filled in by the sim (execution start)
+    end_time: float | None = None     # filled in by the sim (execution end)
+    retire_time: float | None = None  # filled in by the backpressure engine only
 
     def cost(self) -> float:
         # Pipe -> cost.Move, ComputeUnit -> cost.Op
 ```
 
-`deps` are other instructions whose output this one consumes. `start_time` and
-`end_time` are blank until the instruction runs.
+`deps` are other instructions whose output this one consumes. The default engine
+fills `start_time`/`end_time` and ignores `dst`/`retire_time`; the
+[backpressure engine](#backpressure-engine-simbackpressurepy) uses `dst` and also
+fills `retire_time`.
 
 ## Channel
 
@@ -95,18 +99,38 @@ pipes, i.e. two AICores. See [run_parallel_add_2core](examples.md#run_parallel_a
 
 ## What is and isn't modeled
 
-Modeled:
+Modeled by the default engine (`engine.run` / `Sim`):
 - Sequential execution within a unit, parallel execution across units.
 - Data dependencies via `deps`.
 - Cycle costs from the [cost model](cost-model.md).
 - Deadlock detection (queued work with no runnable head).
 
-Not modeled (see PLAN.md open decisions):
+Not modeled by `engine.run` (see PLAN.md open decisions):
 - **Intra-pipe contention** beyond the FIFO — no fair-share bandwidth splitting, no
   multiple physical DMA channels per pipe.
 - **Shared-resource contention** — e.g. GM bandwidth shared across cores; each pipe
   is independent.
-- **`queue_depth` / backpressure** — channels are unbounded; `queue_depth` is
-  metadata. A full-queue stall on the issue side isn't simulated.
 - **Flag synchronization** (`SET_FLAG` / `WAIT_FLAG`) — ordering is via `deps`;
   hardware-style flags would be a later trace-fidelity feature.
+
+## Backpressure engine (`sim/backpressure.py`)
+
+A separate engine, `simulate(instructions)`, models **bounded buffers with
+blocking-after-service** — `engine.run` ignores capacity, this one enforces it.
+Give an instruction a `dst` (the buffer its output lands in) and the destination a
+`queue_depth` (slot count). An instruction retires only when its execution is done
+*and* `dst` has a free slot; a unit is held until its instruction retires, so a full
+destination throttles the producer. `dst=None` is an unbounded sink.
+
+It fills `start_time` / `end_time` (execution end) / `retire_time` on each
+instruction and returns total cycles (`max(retire_time)`). Backpressure deadlock
+(work remains but no buffer can drain) raises `RuntimeError`.
+
+This reproduces a **Vector instruction-queue stall**: when Vector's output buffer
+(UB) fills because the drain pipe (MTE3) is slower, a finished Vector op can't
+retire and Vector throttles to the drain rate. See
+[run_vector_stall](examples.md#run_vector_stallpy).
+
+Still not modeled here: the execution-unit issue-ahead limit (a full *instruction*
+queue stalling issue across units needs an in-order dispatcher), and byte-granular
+buffer occupancy (capacity is in tensor-slots).

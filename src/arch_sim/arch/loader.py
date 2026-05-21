@@ -77,11 +77,15 @@ def _unit_to_dict(u: BaseUnit, root: Module) -> dict[str, Any]:
         d["banks"] = u.banks
         d["read_ports"] = u.read_ports
         d["write_ports"] = u.write_ports
+        if u.queue_depth != 1:
+            d["queue_depth"] = u.queue_depth
     elif isinstance(u, ComputeUnit):
         d["operation"] = u.operation
         d["throughput_ops_per_cycle"] = u.throughput_ops_per_cycle
         if u.operand_shape is not None:
             d["operand_shape"] = list(u.operand_shape)
+        if u.queue_depth != 1:
+            d["queue_depth"] = u.queue_depth
     elif isinstance(u, ControlUnit):
         d["instruction_queue_depth"] = u.instruction_queue_depth
     elif isinstance(u, Pipe):

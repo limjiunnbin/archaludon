@@ -6,10 +6,7 @@ from arch_sim.arch import ComputeUnit, Pipe
 
 from .instruction import Instruction
 
-
 class Channel:
-    """FIFO of Instructions bound to a single unit."""
-
     def __init__(self, unit: Union[ComputeUnit, Pipe]):
         self.unit = unit
         self.queue: list[Instruction] = []

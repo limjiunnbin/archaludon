@@ -1,4 +1,4 @@
-"""Simulate c = a + b on NPU. Hand-built schedule; scheduler passes still TBD."""
+"""Simulate c = a + b on NPU. Hand-built instruction list."""
 from pathlib import Path
 
 import torch

@@ -36,10 +36,14 @@ Useful methods:
 
 | Kind | Class | Represents | Key fields |
 |---|---|---|---|
-| `storage` | `StorageUnit` | a memory (GM, L1, UB, …) | `capacity_bytes`, `banks`, `read_ports`, `write_ports` |
-| `compute` | `ComputeUnit` | a functional unit (Cube, Vector, Scalar) | `operation`, `throughput_ops_per_cycle`, `operand_shape` |
+| `storage` | `StorageUnit` | a memory (GM, L1, UB, …) | `capacity_bytes`, `banks`, `read_ports`, `write_ports`, `queue_depth` |
+| `compute` | `ComputeUnit` | a functional unit (Cube, Vector, Scalar) | `operation`, `throughput_ops_per_cycle`, `operand_shape`, `queue_depth` |
 | `control` | `ControlUnit` | instruction issue logic | `instruction_queue_depth` |
 | `pipe` | `Pipe` | a queued data mover (MTE1/2/3, FixPipe) | `allowed_src/dst_kinds`, `allowed_src/dst_names`, `bandwidth`, `queue_depth` |
+
+`queue_depth` (on storage, compute, and pipes) is the buffer/queue capacity the
+[backpressure engine](simulator.md#backpressure-engine-simbackpressurepy) uses; the
+default `Sim` ignores it.
 
 `StorageUnit.can_serve(reads, writes)` checks a request against the port budget.
 `ComputeUnit.throughput_ops_per_cycle` and `Pipe.bandwidth` feed the

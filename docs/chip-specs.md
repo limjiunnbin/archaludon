@@ -31,6 +31,7 @@ Every child has a `name` and a `kind`. Fields by kind:
   banks: 4          # default 1
   read_ports: 2     # default 1
   write_ports: 2    # default 1
+  queue_depth: 2    # default 1; buffer slots for the backpressure engine
 ```
 
 ### compute
@@ -41,6 +42,7 @@ Every child has a `name` and a `kind`. Fields by kind:
   operation: matmul              # free-form label; default "generic"
   throughput_ops_per_cycle: 4096 # feeds cost.Op; default 1.0
   operand_shape: [16, 16, 16]    # optional fixed SIMD shape
+  queue_depth: 1                 # default 1; for the backpressure engine
 ```
 
 ### control
@@ -61,8 +63,12 @@ Every child has a `name` and a `kind`. Fields by kind:
   allowed_src_names: [GM]               # optional; omit to allow any name
   allowed_dst_names: [L1Buffer, UB]     # optional
   bandwidth: 64                          # bytes per cycle; feeds cost.Move
-  queue_depth: 1                         # default 1; currently metadata only
+  queue_depth: 1                         # default 1; queue capacity (backpressure engine)
 ```
+
+`queue_depth` on storage, compute, and pipe units is the slot capacity the
+[backpressure engine](simulator.md#backpressure-engine-simbackpressurepy) enforces.
+The default `Sim` ignores it. It's omitted from `dump` output when left at 1.
 
 `allowed_*_kinds` / `allowed_*_names` are the validation constraints (see
 [Pipe validation](architecture-model.md#pipe-validation)).

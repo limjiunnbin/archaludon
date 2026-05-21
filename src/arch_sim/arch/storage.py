@@ -17,6 +17,8 @@ class StorageUnit(BaseUnit):
     banks: int = 1
     read_ports: int = 1
     write_ports: int = 1
+    # How many live results this buffer can hold (slots) for backpressure modeling.
+    queue_depth: int = 1
 
     def can_serve(self, num_reads: int, num_writes: int) -> bool:
         """True if the requested simultaneous accesses fit within the port budget."""

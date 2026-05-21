@@ -108,6 +108,7 @@ def _build_units(spec: dict[str, Any]) -> Module:
                 banks=child.get("banks", 1),
                 read_ports=child.get("read_ports", 1),
                 write_ports=child.get("write_ports", 1),
+                queue_depth=child.get("queue_depth", 1),
             )
         elif kind == "compute":
             shape = child.get("operand_shape")
@@ -116,6 +117,7 @@ def _build_units(spec: dict[str, Any]) -> Module:
                 operation=child.get("operation", "generic"),
                 throughput_ops_per_cycle=child.get("throughput_ops_per_cycle", 1.0),
                 operand_shape=tuple(shape) if shape is not None else None,
+                queue_depth=child.get("queue_depth", 1),
             )
         elif kind == "control":
             mod.add_control(

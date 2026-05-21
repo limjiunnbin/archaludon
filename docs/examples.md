@@ -99,6 +99,32 @@ Each replica has its own MTE2/Vector/MTE3, so the two additions run fully in
 parallel — a clean 2× speedup. Bump the spec's `count` from 2 to 20 for an Ascend
 910B shape with no other changes. See [Chip specs](chip-specs.md#multi-core-with-count).
 
+## run_vector_stall.py
+
+Demonstrates **backpressure** using the `sim/backpressure.py` engine (not the
+default `Sim`). A burst of Vector ops writes results into UB (capacity 2 results);
+MTE3 drains UB to GM 8× slower than Vector produces. UB fills, so a finished Vector
+op can't retire and Vector stalls — throttled to the drain rate.
+
+```
+per-instruction (start .. exec-end .. retire):
+  Vector     0..8    ret 8     v0 = op(x0)
+  MTE3       8..72   ret 72    store v0->GM
+  Vector     8..16   ret 16    v1 = op(x1)
+  MTE3      72..136  ret 136   store v1->GM
+  Vector    16..24   ret 24    v2 = op(x2)
+  MTE3     136..200  ret 200   store v2->GM
+  Vector    24..32   ret 72    v3 = op(x3)   <-- STALLED
+  MTE3     200..264  ret 264   store v3->GM
+
+total cycles: 264
+bandwidth utilization: 96.97%
+```
+
+v3 finishes executing at cycle 32 but can't retire until 72 — UB is full until MTE3
+drains a slot. MTE3 is the saturated bottleneck (97%). See
+[Simulator › Backpressure engine](simulator.md#backpressure-engine-simbackpressurepy).
+
 ## visualize_npu.py
 
 Renders `specs/npu.yaml` to Graphviz (`examples/npu.dot`, plus a `.png`

@@ -1,8 +1,13 @@
-"""Vector instruction-queue stall from backpressure.
+"""Vector op stalls because its destination buffer (UB) fills up.
 
 A burst of Vector ops each write a result into UB; MTE3 drains UB to GM 8x slower
-than Vector produces. UB (capacity 2 results) fills, so a finished Vector op can't
-retire and the Vector pipe stalls — throttled to MTE3's rate.
+than Vector produces. We give Vector and MTE3 deep enough instruction queues so the
+dispatcher can issue all ops ahead — that lets Vector outrun the drain, fills UB
+(capacity 2 results), and forces a finished Vector op to wait at retirement.
+
+If you instead set Vector/MTE3 queue_depth=1, the same workload still totals 264
+cycles but the stall location moves to the dispatcher (it can't issue past a full
+MTE3 queue); change the depths to see the difference.
 
 Assumes inputs already resident in UB (no loads modeled here).
 """
@@ -20,7 +25,9 @@ def main() -> None:
     vector = chip.find("AICore.Vector")
     mte3 = chip.find("AICore.MTE3")
     ub = chip.find("AICore.UB")
-    ub.queue_depth = 2  # UB holds at most 2 pending result tensors
+    ub.queue_depth = 2     # UB holds at most 2 pending result tensors
+    vector.queue_depth = 8  # let the dispatcher issue ahead
+    mte3.queue_depth = 8
 
     def meta():
         return torch.empty(1024, dtype=torch.float32, device="meta")

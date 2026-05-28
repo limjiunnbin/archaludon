@@ -38,9 +38,11 @@ matmul 64x64 @ 64x64 fp32 -> 768 cycles
 ```
 
 Note MTE1 starts at 256 — in parallel with MTE2 still moving B — because the two
-movers are independent channels. The Cube cost (64 cycles) uses the matmul caveat:
-a `(64, 64, 64)` meta tensor whose `numel` equals the MAC count (see
-[Cost model](cost-model.md#the-matmul-caveat)).
+movers are independent. The Cube cost (64 cycles) is **tile-quantized**: the
+workload is the `(64, 64, 64)` iteration space, and `Op` pads each dim up to the
+Cube's `operand_shape` tile (`[16, 16, 16]`) before counting MACs. 64 is a multiple
+of 16, so there's no padding here — `64³ / 4096 = 64`; an odd dim like 17 would
+round up to 32. See [Cost model](cost-model.md#matmul-tile-quantized-cost).
 
 ## run_softmax.py
 
@@ -124,6 +126,31 @@ bandwidth utilization: 96.97%
 v3 finishes executing at cycle 32 but can't retire until 72 — UB is full until MTE3
 drains a slot. MTE3 is the saturated bottleneck (97%). See
 [Simulator › Backpressure engine](simulator.md#backpressure-engine-simbackpressurepy).
+
+## run_issue_depth.py
+
+Dispatcher head-of-line blocking, ablated by one knob. Three instructions in
+program order — two MTE2 moves and an independent Vector op:
+
+```
+--- MTE2.queue_depth = 1 ---
+     0..64    m0  (MTE2)
+    64..128   m1  (MTE2)
+    64..72    v   (Vector, independent)
+  Vector started at t=64
+
+--- MTE2.queue_depth = 2 ---
+     0..64    m0  (MTE2)
+    64..128   m1  (MTE2)
+     0..8     v   (Vector, independent)
+  Vector started at t=0
+```
+
+With `queue_depth=1` on MTE2 the dispatcher stalls at `m1` (MTE2 full), can't
+reach `v`, and Vector idles until `m0` retires at t=64. Widening the queue lets
+the dispatcher walk to `v` immediately, so it runs in parallel with the loads.
+The total stays the same here (MTE2 is the bottleneck), but on denser schedules
+this head-of-line stall pushes other ops onto the critical path.
 
 ## visualize_npu.py
 

@@ -14,12 +14,20 @@ def meta(n=1024):
     return torch.empty(n, dtype=torch.float32, device="meta")
 
 
-def _stall_workload(ub_capacity):
+def _stall_workload(ub_capacity, *, deep_queues=True):
+    """Burst of Vector ops draining through MTE3, parameterized by UB depth.
+
+    `deep_queues=True` widens Vector/MTE3 instruction queues so the dispatcher can
+    issue ahead and Vector outruns the drain — that's what exposes a UB-buffer
+    stall (rather than a dispatcher head-of-line stall on MTE3's queue)."""
     chip = load(FIXTURE)
     vector = chip.find("AICore.Vector")
     mte3 = chip.find("AICore.MTE3")
     ub = chip.find("AICore.UB")
     ub.queue_depth = ub_capacity
+    if deep_queues:
+        vector.queue_depth = 8
+        mte3.queue_depth = 8
 
     instrs = []
     vs = []

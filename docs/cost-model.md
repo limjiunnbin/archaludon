@@ -44,24 +44,36 @@ t.numel()         # 1_000_000_000  — works without allocating 4 GB
 t.element_size()  # 4
 ```
 
-The cost functions only ever read `numel()` and `element_size()`, so meta tensors
-are exactly the right descriptor: they carry the shape/dtype the model needs and
-nothing else. Always build workload tensors with `device="meta"`.
+The cost functions read only shape and dtype (`numel()`, `element_size()`, and —
+for tiled units — `shape`/`dim()`), so meta tensors are exactly the right
+descriptor: they carry what the model needs and nothing else. Always build workload
+tensors with `device="meta"`.
 
-## The matmul caveat
+## Matmul: tile-quantized cost
 
-`Op` currently assumes one operation per element (`numel`). That's right for
-elementwise ops (add, exp, …) but wrong for matmul, whose true cost is M·N·K
-multiply-accumulates, not M·N output elements.
-
-The examples work around this by handing `Op` a tensor whose `numel` equals the
-MAC count. For a 64×64×64 matmul:
+`Op` uses plain `numel` for elementwise ops (add, exp, …), but a matmul's real cost
+is M·N·K multiply-accumulates, and the Cube works on fixed tiles — every dimension
+is **padded up to the tile boundary** before the MACs are counted. `Op` models this
+when the unit has an `operand_shape` (the tile):
 
 ```python
-work = torch.empty(64, 64, 64, dtype=torch.float32, device="meta")  # numel = 262144
-# Op(cube, work) = 262144 / 4096 = 64 cycles
+# Op pads each dim of t up to the corresponding operand_shape dim, then divides.
+work = product(ceil(dim / tile_dim) * tile_dim for dim, tile_dim in zip(t.shape, operand_shape))
+return work / unit.throughput_ops_per_cycle
 ```
 
-The clean fix (not yet implemented) is to make `Op` dispatch on `unit.operation`:
-for `matmul`, derive cycles from the operand shapes (M·N·K) so the natural `(M, N)`
-output tensor can be passed instead. See PLAN.md.
+So you pass the matmul's iteration space `(M, N, K)` as the workload tensor and the
+Cube's `operand_shape` (e.g. `[16, 16, 16]`) supplies the tile:
+
+```python
+cube = ComputeUnit(operand_shape=(16, 16, 16), throughput_ops_per_cycle=4096)
+Op(cube, meta(64, 64, 64))  #  64^3 / 4096 = 64   (already tile-aligned)
+Op(cube, meta(17, 17, 17))  #  32^3 / 4096 = 8    (17 rounds up to 32 on each axis)
+```
+
+The padding is the point: a 17×17×17 matmul costs as much as 32×32×32, because the
+Cube can't do a partial tile. Units without an `operand_shape` (Vector, Scalar) keep
+the plain `numel / throughput` path. The tensor rank must match the `operand_shape`
+rank, or `Op` raises.
+
+Not yet modeled (see PLAN.md): pipeline fill latency and dtype-dependent throughput.

@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from arch_sim.arch import ComputeUnit, Pipe
@@ -11,6 +12,32 @@ def meta(shape, dtype=torch.float32):
 def test_op_elementwise_cycles():
     vec = ComputeUnit(name="Vector", throughput_ops_per_cycle=128)
     assert Op(vec, meta((1024,))) == 8
+
+
+def test_matmul_tile_aligned_no_padding():
+    cube = ComputeUnit(name="Cube", operand_shape=(16, 16, 16), throughput_ops_per_cycle=4096)
+    # 64 is a multiple of 16: no padding, 64^3 / 4096 = 64
+    assert Op(cube, meta((64, 64, 64))) == 64
+
+
+def test_matmul_pads_odd_dims_up_to_tile():
+    cube = ComputeUnit(name="Cube", operand_shape=(16, 16, 16), throughput_ops_per_cycle=4096)
+    # 17 rounds up to 32 on every axis -> 32^3 / 4096 = 8 (vs ~1.2 without padding)
+    assert Op(cube, meta((17, 17, 17))) == 8
+    # a single 1x1x1 still costs one full tile
+    assert Op(cube, meta((1, 1, 1))) == 1
+
+
+def test_op_without_operand_shape_uses_numel():
+    # Vector has no operand_shape -> unchanged numel/throughput path
+    vec = ComputeUnit(name="Vector", throughput_ops_per_cycle=128)
+    assert Op(vec, meta((100,))) == 100 / 128
+
+
+def test_op_rank_mismatch_for_tiled_unit_raises():
+    cube = ComputeUnit(name="Cube", operand_shape=(16, 16, 16), throughput_ops_per_cycle=4096)
+    with pytest.raises(ValueError, match="rank"):
+        Op(cube, meta((64, 64)))  # 2D tensor, 3D tile
 
 
 def test_op_dtype_does_not_change_compute_cycles():

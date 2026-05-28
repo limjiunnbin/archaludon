@@ -14,6 +14,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
+# MLIR linalg frontend (real upstream MLIR Python bindings, ships with iree-base-compiler).
+frontend = ["iree-base-compiler>=3.10"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

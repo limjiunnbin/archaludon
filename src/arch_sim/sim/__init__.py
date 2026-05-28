@@ -1,6 +1,4 @@
-from .backpressure import simulate
-from .channel import Channel
-from .engine import Sim, run, total_cycles
+from .engine import UNBOUNDED, Sim, simulate, total_cycles
 from .instruction import Instruction
 
-__all__ = ["Instruction", "Channel", "Sim", "run", "total_cycles", "simulate"]
+__all__ = ["Instruction", "Sim", "simulate", "total_cycles", "UNBOUNDED"]

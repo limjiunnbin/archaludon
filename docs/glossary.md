@@ -65,3 +65,9 @@ NPU / Ascend naming; the storage capacities and bandwidths quoted are from
 - **blocking-after-service (BAS)** — the discipline the engine uses: a unit finishes
   executing but stays blocked (can't start the next instruction) until the current
   one can retire.
+- **dispatcher** — the issuer that walks a group's instructions in program order and
+  admits each into the target unit's bounded inflight queue. One dispatcher per
+  AICore (group keyed by `unit.parent`); different AICores issue independently.
+- **head-of-line blocking** — when the dispatcher's next instruction targets a full
+  queue, every *later* instruction in the same group stalls too, even if it would
+  target an idle unit. The hazard the dispatcher exists to expose.

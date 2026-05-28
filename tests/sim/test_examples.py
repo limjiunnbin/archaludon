@@ -45,9 +45,12 @@ def test_matmul_64x64x64_takes_768_cycles():
 
 
 def test_parallel_add_overlaps_move_with_compute():
-    """g = (a+b) + (d+e). c=a+b runs on Vector at t=128..136 while MTE2 is
-    still busy moving d (128..192). Two adds can't truly run in parallel on
-    one Vector unit, but moves overlap with compute."""
+    """g = (a+b) + (d+e). With the in-order per-AICore dispatcher and
+    queue_depth=1, `add_c` can't be issued until the dispatcher has cleared the
+    moves ahead of it in program order — so it starts at 192 (when MTE2's queue
+    frees and Vector can be admitted), not at 128. The overlap is now: while
+    MTE2 moves `e` (192..256), Vector adds `c` (192..200). The total is still
+    bounded by MTE2's four serial loads + the final compute/store chain."""
     chip = load(FIXTURE)
     mte2 = chip.find("AICore.MTE2")
     mte3 = chip.find("AICore.MTE3")
@@ -65,10 +68,9 @@ def test_parallel_add_overlaps_move_with_compute():
 
     Sim(chip, [move_a, move_b, move_d, move_e, add_c, add_f, add_g, store_g]).run()
 
-    # The parallelism we care about: add_c and move_d both start at 128.
-    assert add_c.start_time == 128
-    assert move_d.start_time == 128
-    assert add_c.end_time == 136
+    assert move_d.start_time == 128            # moves serialize on MTE2
+    assert add_c.start_time == 192             # delayed by in-order issue
+    assert add_c.end_time == 200
     assert store_g.end_time == 336
 
 

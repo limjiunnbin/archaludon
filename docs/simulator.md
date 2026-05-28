@@ -131,6 +131,12 @@ This reproduces a **Vector instruction-queue stall**: when Vector's output buffe
 retire and Vector throttles to the drain rate. See
 [run_vector_stall](examples.md#run_vector_stallpy).
 
-Still not modeled here: the execution-unit issue-ahead limit (a full *instruction*
-queue stalling issue across units needs an in-order dispatcher), and byte-granular
-buffer occupancy (capacity is in tensor-slots).
+The execution-unit **issue-ahead limit** is now also modeled: one in-order
+dispatcher per AICore (group keyed by `unit.parent`) walks its program order and
+issues into bounded per-unit inflight queues (sized by `queue_depth`). When a
+target queue is full the dispatcher stalls there, blocking issue of any
+*subsequent* instruction in the same group — head-of-line blocking. Different
+AICores have their own dispatchers, so multi-core workloads still parallelize.
+
+Still not modeled here: byte-granular buffer occupancy (capacity is in
+tensor-slots).

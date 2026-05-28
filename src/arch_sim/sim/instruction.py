@@ -15,11 +15,11 @@ class Instruction:
     tensor: torch.Tensor
     deps: list["Instruction"] = field(default_factory=list)
     label: str = ""
-    # Destination buffer the output lands in. None = unbounded sink (no backpressure).
+    # Destination buffer the output lands in. None = sink outside the modeled region.
     dst: Optional[BaseUnit] = None
     start_time: Optional[float] = None
     end_time: Optional[float] = None  # execution end (start + cost)
-    retire_time: Optional[float] = None  # set by the backpressure engine only
+    retire_time: Optional[float] = None  # execution done + destination ready
 
     def cost(self) -> float:
         if isinstance(self.unit, Pipe):

@@ -22,8 +22,9 @@ def main() -> None:
     a = torch.empty(M, K, dtype=torch.float32, device="meta")
     b = torch.empty(K, N, dtype=torch.float32, device="meta")
     c = torch.empty(M, N, dtype=torch.float32, device="meta")
-    # v1 cost.Op uses numel; for matmul we want M*N*K MACs.
-    # Encode that by handing Cube a meta tensor whose numel equals the MAC count.
+    # Cube cost is tile-quantized: cost.Op pads each dim of this (M, N, K) iteration
+    # space up to the Cube's operand_shape tile, then divides by throughput. 64 is a
+    # multiple of 16 here, so there's no padding; odd dims would round up to 16.
     work = torch.empty(M, N, K, dtype=torch.float32, device="meta")
 
     load_a_l1 = Instruction(unit=mte2, tensor=a, label="GM->L1 A")

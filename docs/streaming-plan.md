@@ -87,7 +87,13 @@ that backpressures the producer the same way storage buffers do today.
    - Extend the deadlock message to surface instructions stuck on a `stream_dep`
      that never started.
 
-### Declaration / tooling (phase 1.5)
+### Declaration / tooling (phase 1.5) — **done**
+
+Items 3–6 are implemented (`DataPath.stream`/`stream_latency`/`fifo_depth`,
+builder/loader round-trip, validator compute→compute + acyclic checks, distinct
+visualizer rendering, and a `cube_to_vector` stream link in `npu.yaml`).
+`DataPath.stream` is inert spec metadata for now — the simulator still reads
+`Instruction.stream_deps`; item 7 (MLIR lowering) is what connects the two.
 
 3. **`arch/pipe.py` (`DataPath`) + `arch/builder.py` + `arch/loader.py`.**
    Add to `DataPath`: `stream: bool = False`, `stream_latency: float = 0.0`, and

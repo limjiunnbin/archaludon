@@ -31,6 +31,7 @@ def validate(root: Module) -> ValidationReport:
     _check_pipe_paths(root, units, report)
     _check_orphans(root, report)
     _check_port_oversubscription(root, report)
+    _check_stream_paths(root, report)
     return report
 
 
@@ -90,6 +91,71 @@ def _check_orphans(root: Module, report: ValidationReport) -> None:
             report.warnings.append(
                 f"unit {unit.qualified_name()} is not referenced by any DataPath"
             )
+
+
+def _check_stream_paths(root: Module, report: ValidationReport) -> None:
+    """Streaming links must be compute->compute and acyclic.
+
+    A `stream=True` path models a producer compute unit feeding a consumer
+    compute unit directly, with no memory buffer in between. Anything else
+    (an endpoint that is storage, an engine on the link, or a cycle of stream
+    edges that would deadlock the simulator) is a spec mistake.
+    """
+    stream_paths = [p for mod in _modules(root) for p in mod.paths if p.stream]
+    for path in stream_paths:
+        label = path.name or f"{path.src.name}->{path.dst.name}"
+        if path.src.kind is not UnitKind.COMPUTE:
+            report.warnings.append(
+                f"stream path {label!r}: src {path.src.name!r} is "
+                f"{path.src.kind.value}, expected compute"
+            )
+        if path.dst.kind is not UnitKind.COMPUTE:
+            report.warnings.append(
+                f"stream path {label!r}: dst {path.dst.name!r} is "
+                f"{path.dst.kind.value}, expected compute"
+            )
+        if path.engine is not None:
+            report.warnings.append(
+                f"stream path {label!r}: has engine {path.engine.name!r}; "
+                f"streaming links are direct and carry no pipe"
+            )
+
+    cycle = _find_stream_cycle(stream_paths)
+    if cycle is not None:
+        chain = " -> ".join(u.name for u in cycle)
+        report.errors.append(f"cyclic streaming edges: {chain}")
+
+
+def _find_stream_cycle(stream_paths: list) -> "list[BaseUnit] | None":
+    """Return one cycle (as a unit chain) over stream edges, or None if acyclic."""
+    adj: dict[BaseUnit, list[BaseUnit]] = {}
+    for p in stream_paths:
+        adj.setdefault(p.src, []).append(p.dst)
+        adj.setdefault(p.dst, [])
+
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[BaseUnit, int] = {u: WHITE for u in adj}
+
+    def dfs(u: BaseUnit, stack: list[BaseUnit]) -> "list[BaseUnit] | None":
+        color[u] = GRAY
+        stack.append(u)
+        for v in adj[u]:
+            if color[v] == GRAY:  # back edge -> cycle
+                return stack[stack.index(v):] + [v]
+            if color[v] == WHITE:
+                found = dfs(v, stack)
+                if found is not None:
+                    return found
+        stack.pop()
+        color[u] = BLACK
+        return None
+
+    for u in adj:
+        if color[u] == WHITE:
+            found = dfs(u, [])
+            if found is not None:
+                return found
+    return None
 
 
 def _check_port_oversubscription(root: Module, report: ValidationReport) -> None:

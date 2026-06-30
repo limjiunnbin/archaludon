@@ -25,6 +25,15 @@ class DataPath:
     bandwidth: float = 0.0
     engine: Optional["Pipe"] = None
     name: Optional[str] = None
+    # Compute->compute streaming link: the producer's result is fed straight into
+    # the consumer with no write-back to internal memory. Inert spec metadata at
+    # this stage — the simulator reads `Instruction.stream_deps`, not this flag;
+    # MLIR lowering (later) is what turns a stream path into those deps.
+    stream: bool = False
+    # Pipeline fill/drain latency on the link, in cycles (0 = ideal overlap).
+    stream_latency: float = 0.0
+    # Link FIFO depth (reserved for phase 2 producer backpressure).
+    fifo_depth: int = 1
 
     def endpoints(self) -> tuple[BaseUnit, BaseUnit]:
         return self.src, self.dst

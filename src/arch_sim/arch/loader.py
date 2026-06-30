@@ -61,6 +61,12 @@ def _module_to_dict(mod: Module, root: Module) -> dict[str, Any]:
                 entry["engine"] = _qualified_from(root, p.engine)
             if p.bandwidth:
                 entry["bandwidth"] = p.bandwidth
+            if p.stream:
+                entry["stream"] = p.stream
+            if p.stream_latency:
+                entry["stream_latency"] = p.stream_latency
+            if p.fifo_depth != 1:
+                entry["fifo_depth"] = p.fifo_depth
             if p.name:
                 entry["name"] = p.name
             paths.append(entry)

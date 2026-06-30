@@ -101,7 +101,15 @@ def _emit_paths(root: Module, lines: list[str]) -> None:
     for mod in _modules(root):
         for p in mod.paths:
             attrs: list[str] = []
-            if p.engine is not None:
+            if p.stream:
+                # Streaming links (compute->compute, no buffer) render as a bold
+                # colored arrow, distinct from buffered direct wires and pipes.
+                latency = f" L{p.stream_latency:g}" if p.stream_latency else ""
+                attrs.append(f'label="stream{latency}"')
+                attrs.append("style=bold")
+                attrs.append('color="firebrick"')
+                attrs.append('fontcolor="firebrick"')
+            elif p.engine is not None:
                 attrs.append(f'label="{p.engine.name}"')
             if p.direction == Direction.BI:
                 attrs.append("dir=both")

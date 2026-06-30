@@ -98,6 +98,9 @@ class Module(BaseUnit):
         direction: Optional["Direction"] = None,
         bandwidth: float = 0.0,
         name: Optional[str] = None,
+        stream: bool = False,
+        stream_latency: float = 0.0,
+        fifo_depth: int = 1,
     ) -> "DataPath":
         """Build a DataPath between two units. Raises on pipe kind/name violation."""
         from .pipe import DataPath, Direction
@@ -111,6 +114,9 @@ class Module(BaseUnit):
             bandwidth=bandwidth,
             engine=engine,
             name=name,
+            stream=stream,
+            stream_latency=stream_latency,
+            fifo_depth=fifo_depth,
         )
         if engine is not None:
             ok, reason = engine.validate(path)

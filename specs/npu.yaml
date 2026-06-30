@@ -110,6 +110,13 @@ children:
         src: L0C
         dst: UB
         engine: FixPipe
+      # Compute->compute streaming link: a matmul result streams straight from the
+      # Cube into the Vector for a fused bias/activation, skipping the L0C->UB
+      # round-trip. See docs/streaming-plan.md.
+      - name: cube_to_vector
+        src: Cube
+        dst: Vector
+        stream: true
       - name: ub_vector
         src: UB
         dst: Vector

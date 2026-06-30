@@ -161,6 +161,9 @@ def _build_paths(spec: dict[str, Any], root: Module, current: Module) -> None:
             direction=Direction(p.get("direction", "uni")),
             bandwidth=p.get("bandwidth", 0.0),
             name=p.get("name"),
+            stream=p.get("stream", False),
+            stream_latency=p.get("stream_latency", 0.0),
+            fifo_depth=p.get("fifo_depth", 1),
         )
 
 

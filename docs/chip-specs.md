@@ -2,8 +2,10 @@
 
 A chip spec is a YAML mapping describing a `Module` tree. `specs/npu.yaml` is
 the reference single-core chip; `specs/npu-2core.yaml` is the same chip with
-two AICores. The loader (`arch/loader.py`) and builder (`arch/builder.py`) turn
-this YAML into the [architecture model](architecture-model.md).
+two AICores; `specs/npu-stream.yaml` adds a direct Cube→Vector streaming wire
+(`stream: true`, with a non-zero `stream_latency`) so a matmul result can stream
+into the Vector for a fused activation. The loader (`arch/loader.py`) and builder
+(`arch/builder.py`) turn this YAML into the [architecture model](architecture-model.md).
 
 ## Top-level structure
 

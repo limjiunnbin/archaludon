@@ -115,10 +115,13 @@ visualizer rendering, and a `cube_to_vector` stream link in `npu.yaml`).
 
 ### Optional (later)
 
-7. **`frontend/linalg_lowering.py`.** Add a fusion path: when an elementwise op
-   consumes a matmul output and the spec has a Cube→Vector stream link, lower the
-   consumer with `stream_deps=[producer_compute]` and skip the intermediate
-   store/load instructions.
+7. **`frontend/linalg_lowering.py`.** — **done.** When a matmul's result feeds a
+   single elementwise consumer and the spec declares a Cube→Vector stream link,
+   `lower()` streams the matmul result into the consumer's Vector op
+   (`stream_deps=[mm]`) and drops the matmul's L0C→GM store and the consumer's
+   reload. Fusion is matmul→`add` only (add→add still routes through GM).
+   Limitation: the IR doesn't model `func` returns, so a matmul whose result is
+   also returned would be fused and lose its GM copy — acceptable for v1.
 
 8. **`cost/cost.py`.** If `L_fill` should be derived from tile size rather than a
    constant, add a `tiles(unit, t)` helper and set `L_fill = Cp / tiles`. Out of

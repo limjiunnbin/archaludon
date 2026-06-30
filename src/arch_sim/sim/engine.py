@@ -96,7 +96,8 @@ def simulate(instructions: list[Instruction]) -> float:
                     remaining -= 1
                     progress = True
 
-            # 2) Start: head of each unit's inflight queue if not yet started, unit free, deps retired.
+            # 2) Start: head of each unit's inflight queue if not yet started, unit free,
+            #    memory deps retired, and streamed producers already flowing.
             for u in units:
                 q = inflight[id(u)]
                 if not q or q[0].start_time is not None:
@@ -106,8 +107,20 @@ def simulate(instructions: list[Instruction]) -> float:
                     continue
                 if not all(d.retire_time is not None and d.retire_time <= now for d in head.deps):
                     continue
+                # A streamed producer need only have *started* (plus the link's fill
+                # latency) — producer and consumer overlap instead of serializing.
+                if not all(s.start_time is not None and s.start_time + head.stream_latency <= now
+                           for s in head.stream_deps):
+                    continue
                 head.start_time = now
-                head.end_time = now + head.cost()
+                # End is the later of (a) this unit's own execution and (b) being fed
+                # by its slowest streamed producer (it can't finish before the producer
+                # has streamed its last element, plus drain). end_time of a streamed
+                # producer is known here because it was set when the producer started.
+                end = now + head.cost()
+                for s in head.stream_deps:
+                    end = max(end, s.end_time + head.stream_latency)
+                head.end_time = end
                 for d in head.deps:  # reading inputs frees the producers' slots
                     if d.dst is not None:
                         occ[id(d.dst)] -= 1
@@ -126,17 +139,30 @@ def simulate(instructions: list[Instruction]) -> float:
         if remaining == 0:
             break
 
-        # Advance to the next execution-end among currently-executing heads.
+        # Advance to the next event: an execution-end among running heads, or the
+        # moment a stalled head becomes eligible to start (e.g. a stream's fill
+        # latency elapses). Without the latter, a sub-execution-step fill latency
+        # would be rounded up to the next execution-end.
         future = []
         for u in units:
             q = inflight[id(u)]
             if not q:
                 continue
             head = q[0]
-            if (head.start_time is not None
-                    and head.retire_time is None
-                    and head.end_time > now):
-                future.append(head.end_time)
+            if head.start_time is not None:
+                if head.retire_time is None and head.end_time > now:
+                    future.append(head.end_time)
+                continue
+            # Not started: if it's blocked only on time (unit-free, deps retired,
+            # streamed producers already flowing), schedule a wake at that time.
+            if free_at[id(u)] > now and free_at[id(u)] not in (None,):
+                future.append(free_at[id(u)])
+            if (all(d.retire_time is not None for d in head.deps)
+                    and all(s.start_time is not None for s in head.stream_deps)
+                    and head.stream_deps):
+                ready = max(s.start_time + head.stream_latency for s in head.stream_deps)
+                if ready > now:
+                    future.append(ready)
         if not future:
             stuck_units = [u.name for u in units if inflight[id(u)]]
             stuck_groups = [
@@ -144,8 +170,18 @@ def simulate(instructions: list[Instruction]) -> float:
                 for gid, prog in groups.items()
                 if prog_idx[gid] < len(prog)
             ]
+            # Surface heads waiting on a streamed producer that never started
+            # (e.g. a cyclic or mis-ordered stream edge).
+            stream_waits = [
+                head.label or head.unit.name
+                for u in units
+                for head in (inflight[id(u)][:1])
+                if head.start_time is None
+                and any(s.start_time is None for s in head.stream_deps)
+            ]
             raise RuntimeError(
-                f"deadlock: units={stuck_units} groups={stuck_groups}"
+                f"deadlock: units={stuck_units} groups={stuck_groups} "
+                f"stream_waits={stream_waits}"
             )
         now = min(future)
 
